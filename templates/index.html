@@ -1,58 +1,108 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa sem recenter automático</title>
+  <title>Mapa com Rotas</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
   <style>
-    #map { height: 100vh; width: 100vw; }
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { height: 100%; width: 100%; }
+    #menu {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: white;
+      padding: 15px;
+      z-index: 1000;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+    input {
+      width: 200px;
+      margin-bottom: 5px;
+      padding: 5px;
+    }
+    button {
+      padding: 6px 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
+<div id="menu">
+  <label>Origem:</label><br>
+  <input type="text" id="origem" placeholder="Ex: Copacabana RJ"><br>
+  <label>Destino:</label><br>
+  <input type="text" id="destino" placeholder="Ex: Lapa RJ"><br>
+  <button onclick="criarRota()">Traçar rota</button>
+</div>
+
 <div id="map"></div>
 
+<!-- Scripts -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-  let map = L.map('map').setView([-22.9, -43.2], 15);
-  let autoFollow = true;
-  let marker = null;
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
-  // Mapa base
+<script>
+  const map = L.map('map').setView([-22.9, -43.2], 13);
+
+  // Mapa base (OpenStreetMap)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Desativa o autoFollow na primeira vez que o usuário mexe no mapa
-  map.once('dragstart', () => autoFollow = false);
-  map.once('zoomstart', () => autoFollow = false);
+  let controleDeRota = null;
 
-  function atualizarLocalizacao(position) {
-    const lat = position.coords.latitude;
-    const lon = position.coords.longitude;
+  async function geocodificar(endereco) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+    const res = await fetch(url);
+    const dados = await res.json();
 
-    if (!marker) {
-      marker = L.marker([lat, lon]).addTo(map).bindPopup("Você está aqui").openPopup();
-    } else {
-      marker.setLatLng([lat, lon]);
+    if (dados.length === 0) {
+      alert("Endereço não encontrado: " + endereco);
+      return null;
     }
 
-    if (autoFollow) {
-      map.setView([lat, lon], map.getZoom());
+    return [parseFloat(dados[0].lat), parseFloat(dados[0].lon)];
+  }
+
+  async function criarRota() {
+    const origem = document.getElementById("origem").value;
+    const destino = document.getElementById("destino").value;
+
+    if (!origem || !destino) {
+      alert("Preencha os dois campos!");
+      return;
     }
-  }
 
-  function erroLocalizacao(err) {
-    console.log("Erro ao obter localização:", err.message);
-  }
+    const coordOrigem = await geocodificar(origem);
+    const coordDestino = await geocodificar(destino);
 
-  if (navigator.geolocation) {
-    setInterval(() => {
-      navigator.geolocation.getCurrentPosition(atualizarLocalizacao, erroLocalizacao);
-    }, 3000);
-  } else {
-    alert("Geolocalização não suportada neste navegador.");
+    if (!coordOrigem || !coordDestino) return;
+
+    // Remove rota anterior
+    if (controleDeRota) {
+      map.removeControl(controleDeRota);
+    }
+
+    // Adiciona nova rota
+    controleDeRota = L.Routing.control({
+      waypoints: [
+        L.latLng(coordOrigem[0], coordOrigem[1]),
+        L.latLng(coordDestino[0], coordDestino[1])
+      ],
+      routeWhileDragging: false,
+      showAlternatives: true,
+      language: 'pt-BR',
+      createMarker: function(i, wp) {
+        return L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino");
+      }
+    }).addTo(map);
   }
 </script>
 
