@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return 'Olá, Flask no GitHub!'
+    return 'Olá, Flask no GitHub - teste aqui!'
 
 @app.route('/buscador')
 def buscar():
