@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa com Ícone de Carro</title>
+  <title>Mapa sem recenter automático</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -19,23 +19,21 @@
   let autoFollow = true;
   let marker = null;
 
-  // Desativa o auto-follow após mover
+  // Mapa base
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Desativa o autoFollow na primeira vez que o usuário mexe no mapa
   map.once('dragstart', () => autoFollow = false);
   map.once('zoomstart', () => autoFollow = false);
-
-  // Ícone personalizado
-  const iconeCarro = L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/481/481405.png',
-    iconSize: [40, 40], // largura, altura
-    iconAnchor: [20, 20] // ponto do ícone que encosta na coordenada
-  });
 
   function atualizarLocalizacao(position) {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
 
     if (!marker) {
-      marker = L.marker([lat, lon], { icon: iconeCarro }).addTo(map).bindPopup("Você está aqui");
+      marker = L.marker([lat, lon]).addTo(map).bindPopup("Você está aqui").openPopup();
     } else {
       marker.setLatLng([lat, lon]);
     }
