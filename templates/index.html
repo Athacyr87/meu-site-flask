@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa com Rotas e Estilo Personalizado</title>
+  <title>Mapa com Rotas e Estilo Escuro</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -21,6 +21,7 @@
       z-index: 1000;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       border-radius: 8px;
+      transition: all 0.3s ease;
     }
 
     #estilo-btn {
@@ -34,6 +35,7 @@
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
       font-size: 14px;
       cursor: pointer;
+      transition: all 0.3s ease;
     }
 
     input, button {
@@ -41,6 +43,20 @@
       margin-bottom: 6px;
       padding: 6px;
       font-size: 14px;
+    }
+
+    /* 🌙 Modo escuro */
+    .dark-mode {
+      background: #222 !important;
+      color: #fff !important;
+      border-color: #555 !important;
+    }
+
+    .dark-mode input,
+    .dark-mode button {
+      background: #333 !important;
+      color: #fff !important;
+      border: 1px solid #666 !important;
     }
   </style>
 </head>
@@ -136,13 +152,25 @@
   }
 
   function trocarEstilo() {
+    const menu = document.getElementById('menu');
+    const estiloBtn = document.getElementById('estilo-btn');
+
     if (usandoClaro) {
       map.removeLayer(mapaClaro);
       mapaEscuro.addTo(map);
+
+      // Ativa modo escuro nos elementos
+      menu.classList.add('dark-mode');
+      estiloBtn.classList.add('dark-mode');
     } else {
       map.removeLayer(mapaEscuro);
       mapaClaro.addTo(map);
+
+      // Volta pro modo claro
+      menu.classList.remove('dark-mode');
+      estiloBtn.classList.remove('dark-mode');
     }
+
     usandoClaro = !usandoClaro;
   }
 </script>
