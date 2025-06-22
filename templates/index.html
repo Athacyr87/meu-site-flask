@@ -1,18 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <title>Navegação Estilo Uber</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>Mapa com Navegação e Carrinho</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"
+  />
+
   <style>
-    html, body { margin: 0; height: 100%; }
-    #map { height: 100%; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+    }
+    #map {
+      height: 100vh; width: 100vw;
+    }
+    #menu {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: white;
+      padding: 15px;
+      z-index: 1000;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      border-radius: 8px;
+      max-width: 230px;
+    }
+    #estilo-btn, #navegar-btn {
+      position: absolute;
+      bottom: 20px;
+      z-index: 1001;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    #estilo-btn {
+      right: 20px;
+    }
+    #navegar-btn {
+      right: 140px;
+    }
+
+    input, button {
+      width: 200px;
+      margin-bottom: 6px;
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    /* Modo escuro */
+    .dark-mode {
+      background: #222 !important;
+      color: #fff !important;
+      border-color: #555 !important;
+    }
+    .dark-mode input,
+    .dark-mode button {
+      background: #333 !important;
+      color: #fff !important;
+      border: 1px solid #666 !important;
+    }
   </style>
 </head>
 <body>
+
+<div id="menu">
+  <input type="text" id="origem" placeholder="Origem (ex: Copacabana RJ)" />
+  <input type="text" id="destino" placeholder="Destino (ex: Lapa RJ)" />
+  <button onclick="criarRota()">🚗 Traçar Rota</button>
+  <button onclick="inverterRota()">🔄 Inverter Rota</button>
+</div>
+
+<button id="navegar-btn" onclick="toggleNavegacao()">🚀 Navegar</button>
+<button id="estilo-btn" onclick="trocarEstilo()">🎨 Trocar Estilo</button>
 
 <div id="map"></div>
 
@@ -20,56 +90,188 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  const map = L.map('map').setView([-22.9, -43.2], 15);
-  const tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
+  const mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  });
 
-  let marcador = null;
-  let rota = null;
+  const mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  });
 
-  const destino = L.latLng(-22.915, -43.175); // ponto fixo de destino
+  const map = L.map('map', {
+    center: [-22.9, -43.2],
+    zoom: 13,
+    layers: [mapaClaro]
+  });
 
-  function atualizarPosicao(pos) {
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const localAtual = L.latLng(lat, lon);
+  let usandoClaro = true;
+  let controleDeRota = null;
+  let navegando = false;
+  let markerCarrinho = null;
+  let watchId = null;
 
-    if (!marcador) {
-      marcador = L.marker(localAtual).addTo(map).bindPopup("Você").openPopup();
-    } else {
-      marcador.setLatLng(localAtual);
+  async function geocodificar(endereco) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+    const res = await fetch(url);
+    const dados = await res.json();
+    if (dados.length === 0) {
+      alert("Endereço não encontrado: " + endereco);
+      return null;
+    }
+    return [parseFloat(dados[0].lat), parseFloat(dados[0].lon)];
+  }
+
+  async function criarRota() {
+    if (navegando) {
+      alert("Pare a navegação antes de criar uma nova rota!");
+      return;
     }
 
-    map.setView(localAtual);
+    const origem = document.getElementById("origem").value;
+    const destino = document.getElementById("destino").value;
 
-    if (rota) {
-      rota.setWaypoints([localAtual, destino]);
-    } else {
-      rota = L.Routing.control({
-        waypoints: [localAtual, destino],
-        routeWhileDragging: false,
-        show: false,
-        language: 'pt-BR',
-        draggableWaypoints: false,
-        createMarker: () => null
-      }).addTo(map);
+    if (!origem || !destino) {
+      alert("Preencha os dois campos!");
+      return;
+    }
+
+    const coordOrigem = await geocodificar(origem);
+    const coordDestino = await geocodificar(destino);
+
+    if (!coordOrigem || !coordDestino) return;
+
+    if (controleDeRota) {
+      map.removeControl(controleDeRota);
+      controleDeRota = null;
+    }
+
+    controleDeRota = L.Routing.control({
+      waypoints: [
+        L.latLng(coordOrigem[0], coordOrigem[1]),
+        L.latLng(coordDestino[0], coordDestino[1])
+      ],
+      routeWhileDragging: false,
+      showAlternatives: true,
+      altLineOptions: {
+        styles: [{ color: 'gray', opacity: 0.5, weight: 6 }]
+      },
+      language: 'pt-BR',
+      createMarker: function(i, wp) {
+        return L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino");
+      }
+    }).addTo(map);
+
+    if (markerCarrinho) {
+      map.removeLayer(markerCarrinho);
+      markerCarrinho = null;
     }
   }
 
-  function erroPosicao(err) {
-    console.error("Erro ao obter localização:", err);
-    alert("Erro ao acessar GPS: " + err.message);
+  function inverterRota() {
+    if (navegando) {
+      alert("Pare a navegação antes de inverter a rota!");
+      return;
+    }
+    const origem = document.getElementById("origem").value;
+    const destino = document.getElementById("destino").value;
+    document.getElementById("origem").value = destino;
+    document.getElementById("destino").value = origem;
   }
 
-  if (navigator.geolocation) {
-    navigator.geolocation.watchPosition(atualizarPosicao, erroPosicao, {
+  function trocarEstilo() {
+    const menu = document.getElementById('menu');
+    const estiloBtn = document.getElementById('estilo-btn');
+
+    if (usandoClaro) {
+      map.removeLayer(mapaClaro);
+      mapaEscuro.addTo(map);
+      menu.classList.add('dark-mode');
+      estiloBtn.classList.add('dark-mode');
+      document.getElementById('navegar-btn').classList.add('dark-mode');
+    } else {
+      map.removeLayer(mapaEscuro);
+      mapaClaro.addTo(map);
+      menu.classList.remove('dark-mode');
+      estiloBtn.classList.remove('dark-mode');
+      document.getElementById('navegar-btn').classList.remove('dark-mode');
+    }
+    usandoClaro = !usandoClaro;
+  }
+
+  function toggleNavegacao() {
+    if (!controleDeRota) {
+      alert("Crie uma rota primeiro!");
+      return;
+    }
+    if (navegando) {
+      pararNavegacao();
+    } else {
+      iniciarNavegacao();
+    }
+  }
+
+  function iniciarNavegacao() {
+    if (!navigator.geolocation) {
+      alert("Geolocalização não suportada no seu navegador!");
+      return;
+    }
+
+    navegando = true;
+    document.getElementById('navegar-btn').textContent = "⏹️ Parar Navegação";
+
+    watchId = navigator.geolocation.watchPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const posicaoAtual = L.latLng(lat, lon);
+
+      if (!markerCarrinho) {
+        // Ícone carrinho personalizado
+        const iconeCarrinho = L.icon({
+          iconUrl: 'https://cdn-icons-png.flaticon.com/512/743/743007.png',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+        });
+        markerCarrinho = L.marker(posicaoAtual, {icon: iconeCarrinho}).addTo(map).bindPopup("Carrinho");
+      } else {
+        markerCarrinho.setLatLng(posicaoAtual);
+      }
+
+      map.setView(posicaoAtual, map.getZoom());
+
+      // Atualizar rota com ponto inicial na posição atual e o destino fixo da rota original
+      const waypoints = controleDeRota.getWaypoints();
+      if (waypoints.length >= 2) {
+        const destino = waypoints[1].latLng;
+        controleDeRota.setWaypoints([posicaoAtual, destino]);
+      }
+    }, err => {
+      console.error("Erro no GPS:", err);
+      alert("Erro ao obter posição: " + err.message);
+      pararNavegacao();
+    }, {
       enableHighAccuracy: true,
       maximumAge: 0,
       timeout: 10000
     });
-  } else {
-    alert("Geolocalização não suportada");
+  }
+
+  function pararNavegacao() {
+    navegando = false;
+    document.getElementById('navegar-btn').textContent = "🚀 Navegar";
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if (markerCarrinho) {
+      map.removeLayer(markerCarrinho);
+      markerCarrinho = null;
+    }
+
+    // Recria a rota original para resetar o ponto inicial
+    const waypoints = controleDeRota.getWaypoints();
+    if (waypoints.length >= 2) {
+      controleDeRota.setWaypoints([waypoints[0].latLng, waypoints[1].latLng]);
+    }
   }
 </script>
 
