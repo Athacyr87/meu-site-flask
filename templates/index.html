@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa com Rotas</title>
+  <title>Mapa com Rotas Avançadas</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 
   <style>
-    body, html { margin: 0; padding: 0; height: 100%; }
+    html, body { margin: 0; padding: 0; height: 100%; }
     #map { height: 100%; width: 100%; }
     #menu {
       position: absolute;
@@ -21,13 +21,13 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       border-radius: 8px;
     }
-    input {
+    input, select, button {
       width: 200px;
       margin-bottom: 5px;
-      padding: 5px;
+      padding: 6px;
+      font-size: 14px;
     }
     button {
-      padding: 6px 10px;
       cursor: pointer;
     }
   </style>
@@ -35,11 +35,12 @@
 <body>
 
 <div id="menu">
-  <label>Origem:</label><br>
-  <input type="text" id="origem" placeholder="Ex: Copacabana RJ"><br>
-  <label>Destino:</label><br>
-  <input type="text" id="destino" placeholder="Ex: Lapa RJ"><br>
-  <button onclick="criarRota()">Traçar rota</button>
+  <input type="text" id="origem" placeholder="Origem (ex: Copacabana RJ)"><br>
+  <input type="text" id="destino" placeholder="Destino (ex: Lapa RJ)"><br>
+  
+  <button onclick="criarRota()">🚗 Traçar Rota</button><br>
+  <button onclick="inverterRota()">🔄 Inverter Rota</button><br>
+  <button onclick="trocarEstilo()">🎨 Trocar Estilo</button><br>
 </div>
 
 <div id="map"></div>
@@ -49,25 +50,27 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  const map = L.map('map').setView([-22.9, -43.2], 13);
-
-  // Mapa base (OpenStreetMap)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  let mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  });
 
+  let mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  });
+
+  const map = L.map('map', { center: [-22.9, -43.2], zoom: 13, layers: [mapaClaro] });
+
+  let usandoClaro = true;
   let controleDeRota = null;
 
   async function geocodificar(endereco) {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
     const res = await fetch(url);
     const dados = await res.json();
-
     if (dados.length === 0) {
       alert("Endereço não encontrado: " + endereco);
       return null;
     }
-
     return [parseFloat(dados[0].lat), parseFloat(dados[0].lon)];
   }
 
@@ -85,12 +88,11 @@
 
     if (!coordOrigem || !coordDestino) return;
 
-    // Remove rota anterior
+    // Remove rota anterior se houver
     if (controleDeRota) {
       map.removeControl(controleDeRota);
     }
 
-    // Adiciona nova rota
     controleDeRota = L.Routing.control({
       waypoints: [
         L.latLng(coordOrigem[0], coordOrigem[1]),
@@ -98,11 +100,32 @@
       ],
       routeWhileDragging: false,
       showAlternatives: true,
+      altLineOptions: {
+        styles: [{ color: 'gray', opacity: 0.5, weight: 6 }]
+      },
       language: 'pt-BR',
       createMarker: function(i, wp) {
         return L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino");
       }
     }).addTo(map);
+  }
+
+  function inverterRota() {
+    const origem = document.getElementById("origem").value;
+    const destino = document.getElementById("destino").value;
+    document.getElementById("origem").value = destino;
+    document.getElementById("destino").value = origem;
+  }
+
+  function trocarEstilo() {
+    if (usandoClaro) {
+      map.removeLayer(mapaClaro);
+      mapaEscuro.addTo(map);
+    } else {
+      map.removeLayer(mapaEscuro);
+      mapaClaro.addTo(map);
+    }
+    usandoClaro = !usandoClaro;
   }
 </script>
 
