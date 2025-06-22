@@ -1,27 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa Estilo Uber</title>
+  <title>Mapa Estilo Uber (com controle de centragem)</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; }
+    #btn-local {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
+<button id="btn-local">🔄 Minha localização</button>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-  let map = L.map('map').setView([-22.9, -43.2], 15); // Pode iniciar com qualquer cidade
+  let map = L.map('map').setView([-22.9, -43.2], 15);
+  let autoFollow = true;
+  let marker = null;
 
+  // Tile do mapa
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  let marker = null;
+  // Parar de seguir quando o usuário interagir
+  map.on('dragstart zoomstart', () => {
+    autoFollow = false;
+  });
+
+  // Botão para recenter
+  document.getElementById('btn-local').addEventListener('click', () => {
+    autoFollow = true;
+  });
 
   function atualizarLocalizacao(position) {
     const lat = position.coords.latitude;
@@ -33,15 +56,16 @@
       marker.setLatLng([lat, lon]);
     }
 
-    map.setView([lat, lon]);
+    if (autoFollow) {
+      map.setView([lat, lon], map.getZoom());
+    }
   }
 
   function erroLocalizacao(err) {
-    alert("Erro ao obter localização: " + err.message);
+    console.log("Erro ao obter localização:", err.message);
   }
 
   if (navigator.geolocation) {
-    // Atualiza a localização a cada 3 segundos
     setInterval(() => {
       navigator.geolocation.getCurrentPosition(atualizarLocalizacao, erroLocalizacao);
     }, 3000);
