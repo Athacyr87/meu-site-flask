@@ -1,177 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa com Rotas e Estilo Escuro</title>
+  <title>Navegação Estilo Uber</title>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
-
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { height: 100%; width: 100%; }
-
-    #menu {
-      position: absolute;
-      top: 10px; left: 10px;
-      background: white;
-      padding: 15px;
-      z-index: 1000;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-
-    #estilo-btn {
-      position: absolute;
-      bottom: 20px; right: 20px;
-      z-index: 1001;
-      background: white;
-      border: 1px solid #ccc;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    input, button {
-      width: 200px;
-      margin-bottom: 6px;
-      padding: 6px;
-      font-size: 14px;
-    }
-
-    /* 🌙 Modo escuro */
-    .dark-mode {
-      background: #222 !important;
-      color: #fff !important;
-      border-color: #555 !important;
-    }
-
-    .dark-mode input,
-    .dark-mode button {
-      background: #333 !important;
-      color: #fff !important;
-      border: 1px solid #666 !important;
-    }
+    html, body { margin: 0; height: 100%; }
+    #map { height: 100%; }
   </style>
 </head>
 <body>
 
-<!-- Menu lateral -->
-<div id="menu">
-  <input type="text" id="origem" placeholder="Origem (ex: Copacabana RJ)"><br>
-  <input type="text" id="destino" placeholder="Destino (ex: Lapa RJ)"><br>
-  <button onclick="criarRota()">🚗 Traçar Rota</button><br>
-  <button onclick="inverterRota()">🔄 Inverter Rota</button>
-</div>
-
-<!-- Botão de estilo no canto inferior direito -->
-<button id="estilo-btn" onclick="trocarEstilo()">🎨 Trocar Estilo</button>
-
-<!-- Mapa -->
 <div id="map"></div>
 
-<!-- Scripts -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  const mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  });
+  const map = L.map('map').setView([-22.9, -43.2], 15);
+  const tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-  const mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; CARTO'
-  });
+  let marcador = null;
+  let rota = null;
 
-  const map = L.map('map', {
-    center: [-22.9, -43.2],
-    zoom: 13,
-    layers: [mapaClaro]
-  });
+  const destino = L.latLng(-22.915, -43.175); // ponto fixo de destino
 
-  let usandoClaro = true;
-  let controleDeRota = null;
+  function atualizarPosicao(pos) {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const localAtual = L.latLng(lat, lon);
 
-  async function geocodificar(endereco) {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
-    const res = await fetch(url);
-    const dados = await res.json();
-    if (dados.length === 0) {
-      alert("Endereço não encontrado: " + endereco);
-      return null;
-    }
-    return [parseFloat(dados[0].lat), parseFloat(dados[0].lon)];
-  }
-
-  async function criarRota() {
-    const origem = document.getElementById("origem").value;
-    const destino = document.getElementById("destino").value;
-
-    if (!origem || !destino) {
-      alert("Preencha os dois campos!");
-      return;
-    }
-
-    const coordOrigem = await geocodificar(origem);
-    const coordDestino = await geocodificar(destino);
-
-    if (!coordOrigem || !coordDestino) return;
-
-    if (controleDeRota) {
-      map.removeControl(controleDeRota);
-    }
-
-    controleDeRota = L.Routing.control({
-      waypoints: [
-        L.latLng(coordOrigem[0], coordOrigem[1]),
-        L.latLng(coordDestino[0], coordDestino[1])
-      ],
-      routeWhileDragging: false,
-      showAlternatives: true,
-      altLineOptions: {
-        styles: [{ color: 'gray', opacity: 0.5, weight: 6 }]
-      },
-      language: 'pt-BR',
-      createMarker: function(i, wp) {
-        return L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino");
-      }
-    }).addTo(map);
-  }
-
-  function inverterRota() {
-    const origem = document.getElementById("origem").value;
-    const destino = document.getElementById("destino").value;
-    document.getElementById("origem").value = destino;
-    document.getElementById("destino").value = origem;
-  }
-
-  function trocarEstilo() {
-    const menu = document.getElementById('menu');
-    const estiloBtn = document.getElementById('estilo-btn');
-
-    if (usandoClaro) {
-      map.removeLayer(mapaClaro);
-      mapaEscuro.addTo(map);
-
-      // Ativa modo escuro nos elementos
-      menu.classList.add('dark-mode');
-      estiloBtn.classList.add('dark-mode');
+    if (!marcador) {
+      marcador = L.marker(localAtual).addTo(map).bindPopup("Você").openPopup();
     } else {
-      map.removeLayer(mapaEscuro);
-      mapaClaro.addTo(map);
-
-      // Volta pro modo claro
-      menu.classList.remove('dark-mode');
-      estiloBtn.classList.remove('dark-mode');
+      marcador.setLatLng(localAtual);
     }
 
-    usandoClaro = !usandoClaro;
+    map.setView(localAtual);
+
+    if (rota) {
+      rota.setWaypoints([localAtual, destino]);
+    } else {
+      rota = L.Routing.control({
+        waypoints: [localAtual, destino],
+        routeWhileDragging: false,
+        show: false,
+        language: 'pt-BR',
+        draggableWaypoints: false,
+        createMarker: () => null
+      }).addTo(map);
+    }
+  }
+
+  function erroPosicao(err) {
+    console.error("Erro ao obter localização:", err);
+    alert("Erro ao acessar GPS: " + err.message);
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(atualizarPosicao, erroPosicao, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    });
+  } else {
+    alert("Geolocalização não suportada");
   }
 </script>
 
