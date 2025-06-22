@@ -8,5 +8,21 @@
     <h1>Bem-vindo ao meu site com Flask!</h1>
     <p>Essa página está vindo de um arquivo HTML.</p>
     <h1>Hora Atual:</h1>
+    <div id="hora"></div>
+
+    <script>
+        function atualizarHora() {
+            const agora = new Date();
+            const horaFormatada = agora.toLocaleTimeString('pt-BR');
+            document.getElementById('hora').textContent = horaFormatada;
+        }
+
+        // Chama a função imediatamente
+        atualizarHora();
+
+        // Atualiza a hora a cada segundo (1000ms)
+        setInterval(atualizarHora, 1000);
+    </script>
+    
 </body>
 </html>
