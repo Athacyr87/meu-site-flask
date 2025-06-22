@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa com Rotas Avançadas</title>
+  <title>Mapa com Rotas e Estilo Personalizado</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
@@ -12,6 +12,7 @@
   <style>
     html, body { margin: 0; padding: 0; height: 100%; }
     #map { height: 100%; width: 100%; }
+
     #menu {
       position: absolute;
       top: 10px; left: 10px;
@@ -21,28 +22,42 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       border-radius: 8px;
     }
-    input, select, button {
+
+    #estilo-btn {
+      position: absolute;
+      bottom: 20px; right: 20px;
+      z-index: 1001;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    input, button {
       width: 200px;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
       padding: 6px;
       font-size: 14px;
-    }
-    button {
-      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
+<!-- Menu lateral -->
 <div id="menu">
   <input type="text" id="origem" placeholder="Origem (ex: Copacabana RJ)"><br>
   <input type="text" id="destino" placeholder="Destino (ex: Lapa RJ)"><br>
-  
   <button onclick="criarRota()">🚗 Traçar Rota</button><br>
-  <button onclick="inverterRota()">🔄 Inverter Rota</button><br>
-  <button onclick="trocarEstilo()">🎨 Trocar Estilo</button><br>
+  <button onclick="inverterRota()">🔄 Inverter Rota</button>
 </div>
 
+<!-- Botão de estilo no canto inferior direito -->
+<button id="estilo-btn" onclick="trocarEstilo()">🎨 Trocar Estilo</button>
+
+<!-- Mapa -->
 <div id="map"></div>
 
 <!-- Scripts -->
@@ -50,15 +65,19 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  let mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  const mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   });
 
-  let mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  const mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; CARTO'
   });
 
-  const map = L.map('map', { center: [-22.9, -43.2], zoom: 13, layers: [mapaClaro] });
+  const map = L.map('map', {
+    center: [-22.9, -43.2],
+    zoom: 13,
+    layers: [mapaClaro]
+  });
 
   let usandoClaro = true;
   let controleDeRota = null;
@@ -88,7 +107,6 @@
 
     if (!coordOrigem || !coordDestino) return;
 
-    // Remove rota anterior se houver
     if (controleDeRota) {
       map.removeControl(controleDeRota);
     }
