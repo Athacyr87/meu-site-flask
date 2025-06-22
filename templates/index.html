@@ -1,28 +1,31 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Meu site Flask</title>
+  <title>Mapa Exemplo</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 500px; width: 100%; }
+  </style>
 </head>
 <body>
-    <h1>Bem-vindo ao meu site com Flask!</h1>
-    <p>Essa página está vindo de um arquivo HTML.</p>
-    <h1>Hora Atual:</h1>
-    <div id="hora"></div>
 
-    <script>
-        function atualizarHora() {
-            const agora = new Date();
-            const horaFormatada = agora.toLocaleTimeString('pt-BR');
-            document.getElementById('hora').textContent = horaFormatada;
-        }
+<h2>Meu Mapa</h2>
+<div id="map"></div>
 
-        // Chama a função imediatamente
-        atualizarHora();
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const mapa = L.map('map').setView([-22.9068, -43.1729], 13); // Rio de Janeiro
 
-        // Atualiza a hora a cada segundo (1000ms)
-        setInterval(atualizarHora, 1000);
-    </script>
-    
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(mapa);
+
+  L.marker([-22.9068, -43.1729])
+    .addTo(mapa)
+    .bindPopup('Você está aqui!')
+    .openPopup();
+</script>
+
 </body>
 </html>
