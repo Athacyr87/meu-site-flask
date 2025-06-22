@@ -2,8 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Mapa com Rota e Preço</title>
+  <title>Mapa com Rota, Preço e Navegação</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 
@@ -35,6 +36,34 @@
       font-size: 16px;
       color: #008000;
     }
+
+    #estilo-btn, #navegar-btn {
+      position: absolute;
+      bottom: 20px;
+      z-index: 1001;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    #estilo-btn { right: 20px; }
+    #navegar-btn { right: 140px; }
+
+    .dark-mode {
+      background: #222 !important;
+      color: #fff !important;
+    }
+
+    .dark-mode input,
+    .dark-mode button {
+      background: #333 !important;
+      color: #fff !important;
+      border: 1px solid #666 !important;
+    }
   </style>
 </head>
 <body>
@@ -47,21 +76,35 @@
   <div id="preco">💰 Valor estimado: -</div>
 </div>
 
+<button id="navegar-btn" onclick="toggleNavegacao()">🚀 Navegar</button>
+<button id="estilo-btn" onclick="trocarEstilo()">🎨 Trocar Estilo</button>
+
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  const map = L.map('map').setView([-22.9, -43.2], 13);
+  const mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
+  const mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+  });
 
+  const map = L.map('map', {
+    center: [-22.9, -43.2],
+    zoom: 13,
+    layers: [mapaClaro]
+  });
+
+  let usandoClaro = true;
   let controleDeRota = null;
+  let navegando = false;
+  let markerCarrinho = null;
+  let watchId = null;
 
-  // Valores fixos do cálculo
   const precoKm = 2.5;
   const precoMin = 0.5;
   const tarifaBase = 5.0;
@@ -104,10 +147,11 @@
         L.latLng(coordDestino[0], coordDestino[1])
       ],
       routeWhileDragging: false,
+      showAlternatives: true,
       draggableWaypoints: false,
-      show: false,
-      addWaypoints: false,
-      createMarker: (i, wp) => L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino")
+      createMarker: function(i, wp) {
+        return L.marker(wp.latLng).bindPopup(i === 0 ? "Origem" : "Destino");
+      }
     }).addTo(map);
 
     controleDeRota.on('routesfound', function(e) {
@@ -127,6 +171,96 @@
     const destino = document.getElementById("destino").value;
     document.getElementById("origem").value = destino;
     document.getElementById("destino").value = origem;
+  }
+
+  function trocarEstilo() {
+    const menu = document.getElementById('menu');
+    const estiloBtn = document.getElementById('estilo-btn');
+    const navegarBtn = document.getElementById('navegar-btn');
+
+    if (usandoClaro) {
+      map.removeLayer(mapaClaro);
+      mapaEscuro.addTo(map);
+      menu.classList.add('dark-mode');
+      estiloBtn.classList.add('dark-mode');
+      navegarBtn.classList.add('dark-mode');
+    } else {
+      map.removeLayer(mapaEscuro);
+      mapaClaro.addTo(map);
+      menu.classList.remove('dark-mode');
+      estiloBtn.classList.remove('dark-mode');
+      navegarBtn.classList.remove('dark-mode');
+    }
+
+    usandoClaro = !usandoClaro;
+  }
+
+  function toggleNavegacao() {
+    if (!controleDeRota) {
+      alert("Crie uma rota primeiro!");
+      return;
+    }
+    if (navegando) {
+      pararNavegacao();
+    } else {
+      iniciarNavegacao();
+    }
+  }
+
+  function iniciarNavegacao() {
+    if (!navigator.geolocation) {
+      alert("Geolocalização não suportada no seu navegador!");
+      return;
+    }
+
+    navegando = true;
+    document.getElementById('navegar-btn').textContent = "⏹️ Parar Navegação";
+
+    watchId = navigator.geolocation.watchPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      const posicaoAtual = L.latLng(lat, lon);
+
+      if (!markerCarrinho) {
+        const iconeCarrinho = L.icon({
+          iconUrl: 'https://cdn-icons-png.flaticon.com/512/743/743007.png',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+        });
+        markerCarrinho = L.marker(posicaoAtual, {icon: iconeCarrinho}).addTo(map).bindPopup("Você");
+      } else {
+        markerCarrinho.setLatLng(posicaoAtual);
+      }
+
+      map.setView(posicaoAtual, map.getZoom());
+
+      const waypoints = controleDeRota.getWaypoints();
+      if (waypoints.length >= 2) {
+        const destino = waypoints[1].latLng;
+        controleDeRota.setWaypoints([posicaoAtual, destino]);
+      }
+    }, err => {
+      console.error("Erro no GPS:", err);
+      alert("Erro ao obter posição: " + err.message);
+      pararNavegacao();
+    }, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    });
+  }
+
+  function pararNavegacao() {
+    navegando = false;
+    document.getElementById('navegar-btn').textContent = "🚀 Navegar";
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if (markerCarrinho) {
+      map.removeLayer(markerCarrinho);
+      markerCarrinho = null;
+    }
   }
 </script>
 
