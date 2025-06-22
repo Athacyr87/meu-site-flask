@@ -1,29 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Mapa Estilo Uber (com controle de centragem)</title>
+  <title>Mapa sem recenter automático</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     #map { height: 100vh; width: 100vw; }
-    #btn-local {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      border: 1px solid #ccc;
-      padding: 10px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
-<button id="btn-local">🔄 Minha localização</button>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
@@ -31,20 +19,14 @@
   let autoFollow = true;
   let marker = null;
 
-  // Tile do mapa
+  // Mapa base
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Parar de seguir quando o usuário interagir
-  map.on('dragstart zoomstart', () => {
-    autoFollow = false;
-  });
-
-  // Botão para recenter
-  document.getElementById('btn-local').addEventListener('click', () => {
-    autoFollow = true;
-  });
+  // Desativa o autoFollow na primeira vez que o usuário mexe no mapa
+  map.once('dragstart', () => autoFollow = false);
+  map.once('zoomstart', () => autoFollow = false);
 
   function atualizarLocalizacao(position) {
     const lat = position.coords.latitude;
@@ -70,7 +52,7 @@
       navigator.geolocation.getCurrentPosition(atualizarLocalizacao, erroLocalizacao);
     }, 3000);
   } else {
-    alert("Geolocalização não é suportada neste navegador.");
+    alert("Geolocalização não suportada neste navegador.");
   }
 </script>
 
