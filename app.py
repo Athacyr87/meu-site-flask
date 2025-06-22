@@ -1,10 +1,10 @@
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return 'Olá, Flask no GitHub - teste aqui!'
+    return render_template('index.html')
 
 @app.route('/buscador')
 def buscar():
