@@ -197,17 +197,44 @@ const mapaClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{
     usandoClaro = !usandoClaro;
   }
 
+  function abrirWaze(origem, destino) {
+    // exemplo:
+    // origem = {lat: -22.9, lng: -43.2}
+    // destino = {lat: -22.91, lng: -43.3}
+    
+    // Se quiser mandar só destino (o comum)
+    const url = `https://waze.com/ul?ll=${destino.lat},${destino.lng}&navigate=yes`;
+
+    // Para desktop/mobile: abre em nova aba/janela
+    window.open(url, '_blank');
+  }
+
+
   function toggleNavegacao() {
-    if (!controleDeRota) {
-      alert("Crie uma rota primeiro!");
+  if (!controleDeRota) {
+    alert("Crie uma rota primeiro!");
+    return;
+  }
+
+  if (navegando) {
+    pararNavegacao();
+  } else {
+    // Pega destino da rota atual
+    const waypoints = controleDeRota.getWaypoints();
+    if (waypoints.length < 2) {
+      alert("Origem e destino precisam estar definidos.");
       return;
     }
-    if (navegando) {
-      pararNavegacao();
-    } else {
-      iniciarNavegacao();
-    }
+    const origem = waypoints[0].latLng;
+    const destino = waypoints[1].latLng;
+
+    abrirWaze(origem, destino);
+
+    // Opcional: você pode continuar seu modo navegação local com GPS aqui,
+    // ou simplesmente abrir o Waze e parar o modo navegação interno.
   }
+}
+
 
   function iniciarNavegacao() {
     if (!navigator.geolocation) {
@@ -254,7 +281,7 @@ const mapaClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{
 
   function pararNavegacao() {
     navegando = false;
-    document.getElementById('navegar-btn').textContent = "🚀 Navegar";
+    document.getElementById('navegar-btn').textContent = "Navegar";
     if (watchId !== null) {
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
