@@ -85,9 +85,11 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
 
 <script>
-  const mapaClaro = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap & CartoDB'
-  });
+const mapaClaro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap & CartoDB',
+  subdomains: 'abcd',
+  maxZoom: 19
+});
 
   const mapaEscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; CARTO'
