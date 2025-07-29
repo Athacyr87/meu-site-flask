@@ -1,0 +1,50 @@
+.rapidao{
+    display: flex;
+    justify-content: center; /* Centraliza horizontalmente */
+}
+
+.botao_iniciar{
+    display: flex;
+    justify-content: center; /* Centraliza horizontalmente */
+}
+.uber-button {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: #1b1b1b; /* Verde típico do Uber, você pode ajustar */
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px; /* Cantos arredondados */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Sombra suave */
+    transition: background-color 0.3s, transform 0.1s;
+    cursor: pointer;
+}
+
+.uber-button:hover {
+    background-color: #7e817f; /* Tom mais escuro ao passar o mouse */
+    transform: translateY(-2px); /* Efeito de elevação */
+}
+
+.uber-button:active {
+    transform: translateY(0); /* Volta ao normal ao clicar */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para a imagem do carro */
+.image-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center; /* Centraliza horizontalmente */
+    width: 100%;
+  
+}
+
+.image-container img {
+    border-radius: 12px;
+}
+
+body{
+    background-image: url('/static/fundogpt.png'); /* Substitua pelo caminho da sua imagem de fundo */
+}

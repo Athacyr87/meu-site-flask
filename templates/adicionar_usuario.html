@@ -1,0 +1,48 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logado Motorista</title>
+    <link rel="stylesheet" href="{{url_for('static', filename='adicionar_usuario.css')}}">
+    
+    <link rel="stylesheet" href="{{url_for('static', filename='menu_lateral_motorista.css')}}"><!--Link para o CSS de menu lateral-->
+</head>
+<body>
+    <main class="corpo"> </main>
+
+    <!--Ícone do menu-->
+    <div class="menu-icon"  onclick="toggleSidebar()">☰</div>
+
+    <!--Sidebar-->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <h2>Menu</h2>
+            <ul>
+                <li><p>Usuário: <strong>{{ nome }}</strong></p></li>
+                <li>Perfil</li>
+                <li>Ganhos</li>
+                <li>Configurações</li>
+                <li>Ajuda</li>
+                <li>Sair</li>
+                <li><a href="/login">Adicionar outro usuário</a></li>
+                <li><a href="/">Voltar para a página inicial</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Overlay para fechar a sidebar -->
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <script>
+        function toggleSidebar(){
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+    </script>
+</body>
+</html>
