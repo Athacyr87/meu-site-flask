@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GPS Web App</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+    <div id="container">
+        <h1>GPS Web App</h1>
+        <div id="info">
+            <p><strong>Endereço:</strong> <span id="address">Buscando...</span></p>
+            <p><strong>Rua:</strong> <span id="street">--</span></p>
+            <p><strong>Velocidade:</strong> <span id="speed">0 km/h</span></p>
+            <p><strong>Precisão:</strong> <span id="accuracy">--</span></p>
+        </div>
+        <div id="map"></div>
+        <button id="locateBtn">Localizar Minha Posição</button>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([-14.2350, -51.9253], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+    
+        let marker = null;
+        let circle = null;
+        const locateBtn = document.getElementById('locateBtn');
+    
+        function updateInfo(data) {
+            document.getElementById('address').textContent = data.address || "Desconhecido";
+            document.getElementById('street').textContent = data.street || "Não identificado";
+            document.getElementById('accuracy').textContent = data.accuracy || "IP";
+        }
+    
+        function updateSpeed(speed) {
+            document.getElementById('speed').textContent = speed 
+                ? `${(speed * 3.6).toFixed(1)} km/h` 
+                : '0 km/h';
+        }
+    
+        function addMarker(latlng, popupText, accuracy) {
+            if (marker) map.removeLayer(marker);
+            if (circle) map.removeLayer(circle);
+    
+            marker = L.marker(latlng).addTo(map)
+                .bindPopup(popupText).openPopup();
+    
+            if (accuracy) {
+                circle = L.circle(latlng, { radius: accuracy }).addTo(map);
+            }
+    
+            map.setView(latlng, accuracy ? 17 : 10);
+        }
+    
+        // FUNÇÃO: Pegar endereço via Nominatim (OpenStreetMap)
+        async function reverseGeocode(lat, lng) {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+                );
+                const data = await response.json();
+    
+                if (data && data.address) {
+                    const addr = data.address;
+                    const street = [addr.road, addr.house_number]
+                        .filter(Boolean)
+                        .join(', ') || "Rua não identificada";
+    
+                    const city = addr.city || addr.town || addr.village || "";
+                    const state = addr.state || "";
+                    const fullAddress = [city, state].filter(Boolean).join(', ') || "Localização aproximada";
+    
+                    return { street, address: fullAddress };
+                }
+            } catch (e) {
+                console.error("Erro no reverse geocoding:", e);
+            }
+            return { street: "Não identificado", address: "Localização aproximada" };
+        }
+    
+        async function onLocationFound(e) {
+            const latlng = e.latlng;
+            const { street, address } = await reverseGeocode(latlng.lat, latlng.lng);
+    
+            addMarker(latlng, `Você está aqui!<br>${street}`, e.accuracy);
+    
+            updateInfo({
+                street,
+                address,
+                accuracy: `${e.accuracy.toFixed(0)}m`
+            });
+            updateSpeed(e.speed);
+        }
+    
+        function onLocationError(e) {
+            alert("GPS não disponível. Usando localização por IP...");
+            fallbackToIP();
+        }
+    
+        async function fallbackToIP() {
+            fetch('/get_location')
+                .then(r => r.json())
+                .then(async data => {
+                    if (data.lat && data.lng) {
+                        const { street, address } = await reverseGeocode(data.lat, data.lng);
+                        const latlng = [data.lat, data.lng];
+    
+                        addMarker(latlng, `Aproximado por IP<br>${street || "Rua não identificada"}`, null);
+    
+                        updateInfo({
+                            street: street || "Rua não identificada",
+                            address: address || data.address,
+                            accuracy: "IP"
+                        });
+                    } else {
+                        document.getElementById('address').textContent = "Não foi possível localizar";
+                        document.getElementById('street').textContent = "--";
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('address').textContent = "Erro de conexão";
+                    document.getElementById('street').textContent = "--";
+                });
+        }
+    
+        locateBtn.addEventListener('click', () => {
+            locateBtn.textContent = "Localizando...";
+            locateBtn.disabled = true;
+    
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    onLocationFound,
+                    onLocationError,
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+                );
+            } else {
+                alert("Seu navegador não suporta geolocalização.");
+                fallbackToIP();
+            }
+        });
+    
+        // Carrega localização por IP ao abrir
+        window.onload = () => {
+            setTimeout(fallbackToIP, 800);
+        };
+    </script>
+</body>
+</html>
